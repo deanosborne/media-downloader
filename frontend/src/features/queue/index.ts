@@ -1,0 +1,1 @@
+// Queue management feature will be implemented here

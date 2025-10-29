@@ -15,10 +15,15 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "eject": "react-scripts eject",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "format": "prettier --write src/**/*.{ts,tsx}",
+    "format:check": "prettier --check src/**/*.{ts,tsx}",
+    "type-check": "tsc --noEmit"
   },
   "proxy": "http://localhost:5000",
   "browserslist": {
@@ -34,8 +39,23 @@
     ]
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1"
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.24",
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.2"
   }
 }

@@ -3,12 +3,21 @@
   "version": "1.0.0",
   "description": "Backend for Media Downloader",
   "type": "module",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "migrate-config": "tsx src/scripts/migrateConfig.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -21,7 +30,19 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
-    "eslint": "^9.38.0",
-    "nodemon": "^3.0.1"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.24",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.2"
   }
 }
