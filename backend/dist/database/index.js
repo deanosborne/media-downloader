@@ -1,78 +1,45 @@
 /**
- * Database module with ConfigManager integration
+ * Database module with repository pattern integration
+ * Maintains backward compatibility while providing new repository-based access
  */
-import sqlite3 from 'sqlite3';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { createConfigManager } from '../config/index.js';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Database instance
+import { getDatabaseService, initializeDatabaseService } from './DatabaseService.js';
+// Legacy variables for backward compatibility
 let db = null;
 let configManager = null;
 /**
  * Initialize the database and configuration manager
+ * Now uses the new DatabaseService internally
  */
 export async function initializeDatabase() {
     if (db && configManager) {
         return { db, configManager };
     }
-    // Create database connection
-    db = new sqlite3.Database(join(__dirname, '../../media_queue.db'));
-    // Initialize database schema
-    await initializeSchema(db);
-    // Create configuration manager
-    configManager = await createConfigManager(db, true);
+    // Initialize the new database service
+    const databaseService = await initializeDatabaseService();
+    // Set legacy variables for backward compatibility
+    db = databaseService.getDatabase();
+    configManager = databaseService.getConfigManager();
     return { db, configManager };
 }
 /**
- * Initialize database schema
+ * Get the database service instance
  */
-async function initializeSchema(database) {
-    return new Promise((resolve, reject) => {
-        database.serialize(() => {
-            // Queue table
-            database.run(`
-        CREATE TABLE IF NOT EXISTS queue (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          type TEXT NOT NULL,
-          name TEXT NOT NULL,
-          year INTEGER,
-          tmdb_id INTEGER,
-          season INTEGER,
-          episode INTEGER,
-          episode_name TEXT,
-          is_season_pack INTEGER DEFAULT 0,
-          status TEXT DEFAULT 'not_started',
-          torrent_name TEXT,
-          torrent_link TEXT,
-          torrent_id TEXT,
-          real_debrid_id TEXT,
-          progress INTEGER DEFAULT 0,
-          error TEXT,
-          file_path TEXT,
-          download_speed TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-            // Config table
-            database.run(`
-        CREATE TABLE IF NOT EXISTS config (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `, (err) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve();
-                }
-            });
-        });
-    });
+export function getService() {
+    return getDatabaseService();
+}
+/**
+ * Get the queue repository
+ */
+export function getQueueRepository() {
+    const service = getService();
+    return service.getQueueRepository();
+}
+/**
+ * Get the config repository
+ */
+export function getConfigRepository() {
+    const service = getService();
+    return service.getConfigRepository();
 }
 /**
  * Basic database operations
@@ -167,5 +134,8 @@ export const isConfigured = async () => {
     const manager = getConfigManager();
     return manager.isConfigured();
 };
+// Export repository types and classes
+export { QueueRepository, ConfigRepository } from '../repositories/index.js';
+export { MediaType, QueueStatus } from '../models/index.js';
 export { db as default };
 //# sourceMappingURL=index.js.map

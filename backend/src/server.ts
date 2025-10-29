@@ -11,7 +11,8 @@ import { fileURLToPath } from 'url';
 import os from 'os';
 
 // Import new modules
-import { initializeDatabase, dbRun, dbGet, dbAll } from './database/index.js';
+import { initializeDatabase, getQueueRepository } from './database/index.js';
+import { MediaType } from './models/index.js';
 import { ConfigManager } from './config/index.js';
 import { initializeTMDBService, searchMedia, getTVShowDetails, getSeasonDetails, getEpisodeDetails } from './services/tmdbService.js';
 import { initializeJackettService, searchTorrents } from './services/jackettService.js';
@@ -526,7 +527,7 @@ app.get('/api/torrents/search', async (req, res) => {
   }
 });
 
-// Queue endpoints (keeping existing implementation for now)
+// Queue endpoints using repository pattern
 app.post('/api/queue', async (req, res) => {
   try {
     const {
@@ -540,23 +541,19 @@ app.post('/api/queue', async (req, res) => {
       is_season_pack,
     } = req.body;
 
-    const result = await dbRun(
-      `INSERT INTO queue (
-        type, name, year, tmdb_id, season, episode, episode_name, is_season_pack
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        type,
-        name,
-        year,
-        tmdb_id,
-        season || null,
-        episode || null,
-        episode_name || null,
-        is_season_pack ? 1 : 0,
-      ]
-    );
+    const queueRepository = getQueueRepository();
+    
+    const item = await queueRepository.createQueueItem({
+      type: type as MediaType,
+      name,
+      year,
+      tmdbId: tmdb_id,
+      season,
+      episode,
+      episodeName: episode_name,
+      isSeasonPack: is_season_pack
+    });
 
-    const item = await dbGet('SELECT * FROM queue WHERE id = ?', [result.id]);
     res.json(item);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -565,8 +562,66 @@ app.post('/api/queue', async (req, res) => {
 
 app.get('/api/queue', async (_req, res) => {
   try {
-    const queue = await dbAll('SELECT * FROM queue ORDER BY created_at DESC');
+    const queueRepository = getQueueRepository();
+    const queue = await queueRepository.findAll({
+      orderBy: 'created_at DESC'
+    });
     res.json(queue);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get queue item by ID
+app.get('/api/queue/:id', async (req, res) => {
+  try {
+    const queueRepository = getQueueRepository();
+    const item = await queueRepository.findById(parseInt(req.params.id));
+    
+    if (!item) {
+      res.status(404).json({ error: 'Queue item not found' });
+      return;
+    }
+    
+    res.json(item);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update queue item
+app.put('/api/queue/:id', async (req, res) => {
+  try {
+    const queueRepository = getQueueRepository();
+    const id = parseInt(req.params.id);
+    const updates = req.body;
+    
+    const item = await queueRepository.update(id, updates);
+    res.json(item);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete queue item
+app.delete('/api/queue/:id', async (req, res) => {
+  try {
+    const queueRepository = getQueueRepository();
+    const id = parseInt(req.params.id);
+    
+    await queueRepository.delete(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get queue statistics
+app.get('/api/queue/stats', async (_req, res) => {
+  try {
+    const queueRepository = getQueueRepository();
+    const stats = await queueRepository.getStats();
+    res.json(stats);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

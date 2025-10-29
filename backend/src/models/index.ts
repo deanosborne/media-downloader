@@ -1,1 +1,17 @@
-// Data models and validation will be implemented here
+/**
+ * Data models exports
+ */
+
+export { 
+  QueueItem, 
+  CreateQueueItemData, 
+  UpdateQueueItemData, 
+  MediaType, 
+  QueueStatus 
+} from './QueueItem.js';
+
+export { 
+  ConfigItem, 
+  CreateConfigItemData, 
+  UpdateConfigItemData 
+} from './ConfigItem.js';
