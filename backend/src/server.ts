@@ -14,7 +14,7 @@ import os from 'os';
 import { initializeDatabase, getQueueRepository } from './database/index.js';
 import { MediaType } from './models/index.js';
 import { ConfigManager } from './config/index.js';
-import { initializeTMDBService, searchMedia, getTVShowDetails, getSeasonDetails, getEpisodeDetails } from './services/tmdbService.js';
+import { initializeTMDBService, searchMedia, getTVShowDetails, getSeasonDetails, getEpisodeDetails } from './services/tmdbServiceLegacy';
 import { initializeJackettService, searchTorrents } from './services/jackettService.js';
 import { initializeRealDebridService } from './services/realDebridService.js';
 

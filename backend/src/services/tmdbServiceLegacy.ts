@@ -3,10 +3,10 @@
  * Provides movie and TV show metadata from The Movie Database API
  */
 
-import { BaseService } from './BaseService';
-import { IConfigManager } from '../config/types';
-import { ILogger, IServiceCache } from '../types/service';
-import { MediaType } from '../models/index';
+import { BaseService } from './BaseService.js';
+import { IConfigManager } from '../config/types.js';
+import { ILogger, IServiceCache } from '../types/service.js';
+import { MediaType } from '../models/index.js';
 
 // TMDB API response interfaces
 export interface TMDBSearchResult {
@@ -76,8 +76,8 @@ export interface TMDBEpisodeDetails {
 export interface MediaSearchResult {
   id: number;
   name: string;
-  year?: number | undefined;
-  overview?: string | undefined;
+  year?: number;
+  overview?: string;
   poster?: string | null;
   type: MediaType;
 }
@@ -85,8 +85,8 @@ export interface MediaSearchResult {
 export interface TVShowDetails {
   id: number;
   name: string;
-  overview?: string | undefined;
-  first_air_date?: string | undefined;
+  overview?: string;
+  first_air_date?: string;
   number_of_seasons: number;
   number_of_episodes: number;
   seasons: SeasonInfo[];
@@ -97,16 +97,16 @@ export interface SeasonInfo {
   season_number: number;
   name: string;
   episode_count: number;
-  air_date?: string | undefined;
-  overview?: string | undefined;
-  poster_path?: string | null | undefined;
+  air_date?: string;
+  overview?: string;
+  poster_path?: string | null;
 }
 
 export interface SeasonDetails {
   season_number: number;
   name: string;
-  overview?: string | undefined;
-  air_date?: string | undefined;
+  overview?: string;
+  air_date?: string;
   episodes: EpisodeInfo[];
 }
 
@@ -114,18 +114,18 @@ export interface EpisodeInfo {
   id: number;
   episode_number: number;
   name: string;
-  overview?: string | undefined;
-  air_date?: string | undefined;
-  runtime?: number | undefined;
+  overview?: string;
+  air_date?: string;
+  runtime?: number;
 }
 
 export interface EpisodeDetails {
   episode_number: number;
   season_number: number;
   name: string;
-  overview?: string | undefined;
-  air_date?: string | undefined;
-  runtime?: number | undefined;
+  overview?: string;
+  air_date?: string;
+  runtime?: number;
 }
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -134,11 +134,15 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
 export class TMDBService extends BaseService {
   private cache: IServiceCache;
 
-  constructor(config: IConfigManager, logger: ILogger, cache: IServiceCache) {
+  constructor(
+    config: IConfigManager,
+    logger: ILogger,
+    cache: IServiceCache
+  ) {
     super('TMDB', config, logger, {
       timeout: 10000,
       retries: 2,
-      retryDelay: 1000,
+      retryDelay: 1000
     });
     this.cache = cache;
   }
@@ -150,26 +154,23 @@ export class TMDBService extends BaseService {
   protected getAuthHeaders(): Record<string, string> {
     const apiKey = this.config.getRequired<string>('tmdb.apiKey');
     return {
-      Authorization: `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${apiKey}`
     };
   }
 
   /**
    * Search for media (movies, TV shows, or multi-search)
    */
-  async searchMedia(
-    query: string,
-    type?: string
-  ): Promise<MediaSearchResult[]> {
+  async searchMedia(query: string, type?: string): Promise<MediaSearchResult[]> {
     // Handle non-TMDB media types
     if (type === 'Book') {
       return this.searchBooks(query);
     }
-
+    
     if (type === 'Audiobook') {
       return this.searchAudiobooks(query);
     }
-
+    
     if (type === 'Application') {
       return this.searchApplications(query);
     }
@@ -195,20 +196,18 @@ export class TMDBService extends BaseService {
 
     const response = await this.get<TMDBSearchResponse>(endpoint, {
       query,
-      language: 'en-US',
+      language: 'en-US'
     });
 
-    const results = response.results.map(item =>
-      this.normalizeSearchResult(item)
-    );
-
+    const results = response.results.map(item => this.normalizeSearchResult(item));
+    
     // Cache results for 10 minutes
     await this.cache.set(cacheKey, results, 10 * 60 * 1000);
-
+    
     this.logger.info('Media search completed', {
       query,
       type,
-      resultCount: results.length,
+      resultCount: results.length
     });
 
     return results;
@@ -221,15 +220,12 @@ export class TMDBService extends BaseService {
     const cacheKey = `tv:${tvShowId}`;
     const cached = await this.cache.get<TVShowDetails>(cacheKey);
     if (cached) {
-      this.logger.debug('Cache hit for TV show details', {
-        tvShowId,
-        cacheKey,
-      });
+      this.logger.debug('Cache hit for TV show details', { tvShowId, cacheKey });
       return cached;
     }
 
     const response = await this.get<TMDBTVShowDetails>(`/tv/${tvShowId}`, {
-      language: 'en-US',
+      language: 'en-US'
     });
 
     const details: TVShowDetails = {
@@ -246,13 +242,13 @@ export class TMDBService extends BaseService {
         episode_count: season.episode_count,
         air_date: season.air_date,
         overview: season.overview,
-        poster_path: season.poster_path,
-      })),
+        poster_path: season.poster_path
+      }))
     };
 
     // Cache for 1 hour
     await this.cache.set(cacheKey, details, 60 * 60 * 1000);
-
+    
     this.logger.info('TV show details retrieved', { tvShowId });
     return details;
   }
@@ -260,27 +256,17 @@ export class TMDBService extends BaseService {
   /**
    * Get detailed information about a specific season
    */
-  async getSeasonDetails(
-    tvShowId: string | number,
-    seasonNumber: string | number
-  ): Promise<SeasonDetails> {
+  async getSeasonDetails(tvShowId: string | number, seasonNumber: string | number): Promise<SeasonDetails> {
     const cacheKey = `season:${tvShowId}:${seasonNumber}`;
     const cached = await this.cache.get<SeasonDetails>(cacheKey);
     if (cached) {
-      this.logger.debug('Cache hit for season details', {
-        tvShowId,
-        seasonNumber,
-        cacheKey,
-      });
+      this.logger.debug('Cache hit for season details', { tvShowId, seasonNumber, cacheKey });
       return cached;
     }
 
-    const response = await this.get<TMDBSeasonDetails>(
-      `/tv/${tvShowId}/season/${seasonNumber}`,
-      {
-        language: 'en-US',
-      }
-    );
+    const response = await this.get<TMDBSeasonDetails>(`/tv/${tvShowId}/season/${seasonNumber}`, {
+      language: 'en-US'
+    });
 
     const details: SeasonDetails = {
       season_number: response.season_number,
@@ -293,13 +279,13 @@ export class TMDBService extends BaseService {
         name: ep.name,
         overview: ep.overview,
         air_date: ep.air_date,
-        runtime: ep.runtime,
-      })),
+        runtime: ep.runtime
+      }))
     };
 
     // Cache for 1 hour
     await this.cache.set(cacheKey, details, 60 * 60 * 1000);
-
+    
     this.logger.info('Season details retrieved', { tvShowId, seasonNumber });
     return details;
   }
@@ -315,19 +301,14 @@ export class TMDBService extends BaseService {
     const cacheKey = `episode:${tvShowId}:${seasonNumber}:${episodeNumber}`;
     const cached = await this.cache.get<EpisodeDetails>(cacheKey);
     if (cached) {
-      this.logger.debug('Cache hit for episode details', {
-        tvShowId,
-        seasonNumber,
-        episodeNumber,
-        cacheKey,
-      });
+      this.logger.debug('Cache hit for episode details', { tvShowId, seasonNumber, episodeNumber, cacheKey });
       return cached;
     }
 
     const response = await this.get<TMDBEpisodeDetails>(
       `/tv/${tvShowId}/season/${seasonNumber}/episode/${episodeNumber}`,
       {
-        language: 'en-US',
+        language: 'en-US'
       }
     );
 
@@ -337,17 +318,13 @@ export class TMDBService extends BaseService {
       name: response.name,
       overview: response.overview,
       air_date: response.air_date,
-      runtime: response.runtime,
+      runtime: response.runtime
     };
 
     // Cache for 1 hour
     await this.cache.set(cacheKey, details, 60 * 60 * 1000);
-
-    this.logger.info('Episode details retrieved', {
-      tvShowId,
-      seasonNumber,
-      episodeNumber,
-    });
+    
+    this.logger.info('Episode details retrieved', { tvShowId, seasonNumber, episodeNumber });
     return details;
   }
 
@@ -356,13 +333,13 @@ export class TMDBService extends BaseService {
    */
   private normalizeSearchResult(item: TMDBSearchResult): MediaSearchResult {
     const name = item.title || item.name || '';
-    const year = item.release_date
+    const year = item.release_date 
       ? new Date(item.release_date).getFullYear()
-      : item.first_air_date
+      : item.first_air_date 
         ? new Date(item.first_air_date).getFullYear()
         : undefined;
-
-    const poster = item.poster_path
+    
+    const poster = item.poster_path 
       ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}`
       : null;
 
@@ -382,7 +359,7 @@ export class TMDBService extends BaseService {
       year,
       overview: item.overview,
       poster,
-      type,
+      type
     };
   }
 
@@ -405,9 +382,7 @@ export class TMDBService extends BaseService {
   /**
    * Placeholder for application search - to be implemented with external service
    */
-  private async searchApplications(
-    query: string
-  ): Promise<MediaSearchResult[]> {
+  private async searchApplications(query: string): Promise<MediaSearchResult[]> {
     this.logger.info('Application search not implemented', { query });
     return [];
   }

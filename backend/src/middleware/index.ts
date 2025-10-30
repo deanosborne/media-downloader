@@ -1,1 +1,6 @@
-// Express middleware will be implemented here
+/**
+ * Express middleware exports
+ */
+
+export * from './errorHandler.js';
+export * from './requestLogger.js';
