@@ -1,1 +1,1 @@
-// HTTP request handlers will be implemented here
+export * from './BaseController.js';
