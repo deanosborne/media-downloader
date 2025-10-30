@@ -1,1 +1,2 @@
-// Queue management feature will be implemented here
+// Queue management feature
+export { default as QueueContainer } from './QueueContainer';

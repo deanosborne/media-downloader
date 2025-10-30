@@ -1,1 +1,2 @@
-// Media search feature will be implemented here
+// Media search feature
+export { default as MediaSearchContainer } from './MediaSearchContainer';

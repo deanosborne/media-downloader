@@ -1,1 +1,2 @@
-// Configuration feature will be implemented here
+// Configuration feature
+export { default as SettingsContainer } from './SettingsContainer';
