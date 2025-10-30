@@ -19,7 +19,8 @@ export class ValidationError extends AppError {
   readonly statusCode = 400;
   readonly isOperational = true;
 
-  constructor(message: string, context?: Record<string, any>) {
+  constructor(message: string, field?: string, value?: any) {
+    const context = field ? { field, value } : undefined;
     super(message, context);
   }
 }
@@ -109,6 +110,98 @@ export class SecurityError extends AppError {
 
   constructor(message: string, context?: Record<string, any>) {
     super(message, context);
+  }
+}
+
+/**
+ * Timeout error for request timeouts
+ */
+export class TimeoutError extends AppError {
+  readonly statusCode = 408;
+  readonly isOperational = true;
+
+  constructor(message: string = 'Request timeout', context?: Record<string, any>) {
+    super(message, context);
+  }
+}
+
+/**
+ * Database error for database-related issues
+ */
+export class DatabaseError extends AppError {
+  readonly statusCode = 500;
+  readonly isOperational = true;
+
+  constructor(message: string, context?: Record<string, any>) {
+    super(message, context);
+  }
+}
+
+/**
+ * File system error for file operations
+ */
+export class FileSystemError extends AppError {
+  readonly statusCode = 500;
+  readonly isOperational = true;
+
+  constructor(message: string, context?: Record<string, any>) {
+    super(message, context);
+  }
+}
+
+/**
+ * Error severity levels
+ */
+export enum ErrorSeverity {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical'
+}
+
+/**
+ * Error transformer utility
+ */
+export class ErrorTransformer {
+  static transform(error: any): AppError {
+    if (error instanceof AppError) {
+      return error;
+    }
+
+    if (error.code === 'ENOENT') {
+      return new FileSystemError('File not found', { originalError: error.message });
+    }
+
+    if (error.code === 'EACCES') {
+      return new SecurityError('Access denied', { originalError: error.message });
+    }
+
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      return new TimeoutError('Request timeout', { originalError: error.message });
+    }
+
+    return new ConfigurationError('Unknown error occurred', { originalError: error.message });
+  }
+}
+
+/**
+ * Error categorizer utility
+ */
+export class ErrorCategorizer {
+  static categorize(error: AppError): ErrorSeverity {
+    if (error instanceof SecurityError) {
+      return ErrorSeverity.HIGH;
+    }
+
+    if (error instanceof DatabaseError || error instanceof FileSystemError) {
+      return ErrorSeverity.MEDIUM;
+    }
+
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      return ErrorSeverity.LOW;
+    }
+
+    return ErrorSeverity.MEDIUM;
   }
 }
 
