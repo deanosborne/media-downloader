@@ -4,7 +4,7 @@
 
 import { BaseService } from './BaseService.js';
 import { IConfigManager } from '../config/types.js';
-import { ILogger, ValidationError, ExternalServiceError } from '../types/service.js';
+import { ILogger, ValidationError, ExternalServiceError, IServiceCache } from '../types/service.js';
 
 // Jackett-specific error types
 export class JackettConnectionError extends ExternalServiceError {
@@ -71,12 +71,15 @@ export interface JackettRawResult {
 export type MediaType = 'Movie' | 'TV Show' | 'Book' | 'Audiobook' | 'Application';
 
 export class JackettService extends BaseService {
-  constructor(config: IConfigManager, logger: ILogger) {
+  private cache: IServiceCache;
+
+  constructor(config: IConfigManager, logger: ILogger, cache: IServiceCache) {
     super('Jackett', config, logger, {
       timeout: 30000,
       retries: 2,
       retryDelay: 2000
     });
+    this.cache = cache;
   }
 
   protected getBaseUrl(): string {
@@ -104,6 +107,16 @@ export class JackettService extends BaseService {
 
     const { query, type, qualityPrefs = {} } = params;
     const maxResults = qualityPrefs.maxResults || 20;
+
+    // Create cache key based on search parameters
+    const cacheKey = `jackett:search:${query}:${type || 'all'}:${JSON.stringify(qualityPrefs)}`;
+    
+    // Check cache first (shorter TTL for torrent results - 2 minutes)
+    const cached = await this.cache.get<TorrentResult[]>(cacheKey);
+    if (cached) {
+      this.logger.debug('Cache hit for torrent search', { query, type, cacheKey });
+      return cached.slice(0, maxResults);
+    }
 
     this.logger.info('Searching torrents', { 
       query, 
@@ -136,6 +149,9 @@ export class JackettService extends BaseService {
       const sorted = this.sortTorrentResults(filtered);
 
       const finalResults = sorted.slice(0, maxResults);
+
+      // Cache the results for 2 minutes (torrent results change frequently)
+      await this.cache.set(cacheKey, finalResults, 2 * 60 * 1000);
 
       this.logger.info('Torrent search completed', {
         query,

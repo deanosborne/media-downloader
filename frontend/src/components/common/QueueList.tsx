@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import {
   List,
   Box,
@@ -30,7 +30,7 @@ interface QueueListProps {
   showStats?: boolean;
 }
 
-const QueueList: React.FC<QueueListProps> = ({
+const QueueList: React.FC<QueueListProps> = memo(({
   items,
   loading = false,
   error = null,
@@ -42,7 +42,8 @@ const QueueList: React.FC<QueueListProps> = ({
   compact = false,
   showStats = true,
 }) => {
-  const getStatusCounts = () => {
+  // Memoize status counts calculation
+  const statusCounts = useMemo(() => {
     const counts = {
       [QueueStatus.NOT_STARTED]: 0,
       [QueueStatus.IN_PROGRESS]: 0,
@@ -55,13 +56,14 @@ const QueueList: React.FC<QueueListProps> = ({
     });
     
     return counts;
-  };
+  }, [items]);
 
-  const statusCounts = getStatusCounts();
-  const hasCompletedItems = statusCounts[QueueStatus.COMPLETED] > 0;
-  const hasErrorItems = statusCounts[QueueStatus.ERROR] > 0;
+  // Memoize derived states
+  const hasCompletedItems = useMemo(() => statusCounts[QueueStatus.COMPLETED] > 0, [statusCounts]);
+  const hasErrorItems = useMemo(() => statusCounts[QueueStatus.ERROR] > 0, [statusCounts]);
 
-  const groupItemsByStatus = () => {
+  // Memoize grouped items calculation
+  const groupedItems = useMemo(() => {
     const groups = {
       [QueueStatus.IN_PROGRESS]: [] as QueueItemType[],
       [QueueStatus.NOT_STARTED]: [] as QueueItemType[],
@@ -81,9 +83,20 @@ const QueueList: React.FC<QueueListProps> = ({
     });
     
     return groups;
-  };
+  }, [items]);
 
-  const groupedItems = groupItemsByStatus();
+  // Memoize event handlers
+  const handleRefreshAll = useCallback(() => {
+    if (onRefreshAll) {
+      onRefreshAll();
+    }
+  }, [onRefreshAll]);
+
+  const handleClearCompleted = useCallback(() => {
+    if (onClearCompleted) {
+      onClearCompleted();
+    }
+  }, [onClearCompleted]);
 
   if (loading && items.length === 0) {
     return (
@@ -104,7 +117,7 @@ const QueueList: React.FC<QueueListProps> = ({
           <Button
             size="small"
             startIcon={<RefreshIcon />}
-            onClick={onRefreshAll}
+            onClick={handleRefreshAll}
             sx={{ mt: 1 }}
           >
             Retry
@@ -141,7 +154,7 @@ const QueueList: React.FC<QueueListProps> = ({
                 <Button
                   size="small"
                   startIcon={<RefreshIcon />}
-                  onClick={onRefreshAll}
+                  onClick={handleRefreshAll}
                   disabled={loading}
                 >
                   Refresh
@@ -152,7 +165,7 @@ const QueueList: React.FC<QueueListProps> = ({
                 <Button
                   size="small"
                   startIcon={<ClearIcon />}
-                  onClick={onClearCompleted}
+                  onClick={handleClearCompleted}
                   disabled={loading}
                 >
                   Clear Completed
@@ -295,6 +308,8 @@ const QueueList: React.FC<QueueListProps> = ({
       </List>
     </Box>
   );
-};
+});
+
+QueueList.displayName = 'QueueList';
 
 export default QueueList;

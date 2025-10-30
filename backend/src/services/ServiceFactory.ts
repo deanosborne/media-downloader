@@ -65,7 +65,7 @@ export class ServiceFactory {
    */
   public getJackettService(): JackettService {
     if (!this.services.has('jackett')) {
-      const service = new JackettService(this.config, this.logger);
+      const service = new JackettService(this.config, this.logger, this.cache);
       this.services.set('jackett', service);
     }
     return this.services.get('jackett');
@@ -176,11 +176,13 @@ export function createRealDebridService(
 
 export function createJackettService(
   config: IConfigManager,
-  logger?: ILogger
+  logger?: ILogger,
+  cache?: IServiceCache
 ): JackettService {
   return new JackettService(
     config,
-    logger || new Logger()
+    logger || new Logger(),
+    cache || new ServiceCache()
   );
 }
 

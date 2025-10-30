@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -28,7 +28,7 @@ interface MediaCardProps {
   compact?: boolean;
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({
+const MediaCard: React.FC<MediaCardProps> = memo(({
   media,
   onSelect,
   onDownload,
@@ -37,8 +37,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
   showActions = true,
   compact = false,
 }) => {
-  const getMediaTypeColor = (type: MediaType) => {
-    switch (type) {
+  // Memoize media type color to avoid recalculation
+  const mediaTypeColor = useMemo(() => {
+    switch (media.type) {
       case MediaType.MOVIE:
         return 'primary';
       case MediaType.TV_SHOW:
@@ -50,10 +51,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
       default:
         return 'default';
     }
-  };
+  }, [media.type]);
 
-  const getMediaTypeLabel = (type: MediaType) => {
-    switch (type) {
+  // Memoize media type label to avoid recalculation
+  const mediaTypeLabel = useMemo(() => {
+    switch (media.type) {
       case MediaType.MOVIE:
         return 'Movie';
       case MediaType.TV_SHOW:
@@ -65,29 +67,52 @@ const MediaCard: React.FC<MediaCardProps> = ({
       default:
         return 'Media';
     }
-  };
+  }, [media.type]);
+
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleSelect = useCallback(() => {
+    if (onSelect) {
+      onSelect(media);
+    }
+  }, [onSelect, media]);
+
+  const handleDownload = useCallback(() => {
+    if (onDownload) {
+      onDownload(media);
+    }
+  }, [onDownload, media]);
+
+  const handleInfo = useCallback(() => {
+    if (onInfo) {
+      onInfo(media);
+    }
+  }, [onInfo, media]);
+
+  // Memoize card styles to prevent recalculation
+  const cardStyles = useMemo(() => ({
+    height: compact ? 'auto' : '100%',
+    display: 'flex',
+    flexDirection: compact ? 'row' : 'column',
+    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: 4,
+    },
+  }), [compact]);
+
+  // Memoize media styles to prevent recalculation
+  const mediaStyles = useMemo(() => ({
+    width: compact ? 80 : '100%',
+    height: compact ? 120 : 200,
+    objectFit: 'cover',
+  }), [compact]);
 
   return (
-    <Card
-      sx={{
-        height: compact ? 'auto' : '100%',
-        display: 'flex',
-        flexDirection: compact ? 'row' : 'column',
-        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 4,
-        },
-      }}
-    >
+    <Card sx={cardStyles}>
       {media.poster && (
         <CardMedia
           component="img"
-          sx={{
-            width: compact ? 80 : '100%',
-            height: compact ? 120 : 200,
-            objectFit: 'cover',
-          }}
+          sx={mediaStyles}
           image={media.poster}
           alt={media.name}
         />
@@ -112,8 +137,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
               {media.name}
             </Typography>
             <Chip
-              label={getMediaTypeLabel(media.type)}
-              color={getMediaTypeColor(media.type)}
+              label={mediaTypeLabel}
+              color={mediaTypeColor}
               size="small"
               sx={{ ml: 1, flexShrink: 0 }}
             />
@@ -151,7 +176,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                   <Button
                     size="small"
                     startIcon={<PlayIcon />}
-                    onClick={() => onSelect(media)}
+                    onClick={handleSelect}
                     disabled={loading}
                   >
                     Select
@@ -165,7 +190,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <span>
                       <IconButton
                         size="small"
-                        onClick={() => onInfo(media)}
+                        onClick={handleInfo}
                         disabled={loading}
                         aria-label="View Details"
                       >
@@ -181,7 +206,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => onDownload(media)}
+                        onClick={handleDownload}
                         disabled={loading}
                         aria-label="Download"
                       >
@@ -197,6 +222,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
       </Box>
     </Card>
   );
-};
+});
+
+MediaCard.displayName = 'MediaCard';
 
 export default MediaCard;

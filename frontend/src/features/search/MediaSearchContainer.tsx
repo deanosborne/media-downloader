@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import {
   Box,
   TextField,
@@ -21,6 +21,7 @@ import {
 import { MediaItem, MediaType } from '../../types';
 import { useMediaSearch } from '../../hooks/useMediaSearch';
 import { useAppContext } from '../../store/AppContext';
+import { useDebounce } from '../../hooks/useDebounce';
 import MediaCard from '../../components/common/MediaCard';
 
 interface MediaSearchContainerProps {
@@ -32,7 +33,7 @@ interface MediaSearchContainerProps {
   autoSearch?: boolean;
 }
 
-const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
+const MediaSearchContainer: React.FC<MediaSearchContainerProps> = memo(({
   onMediaSelect,
   onMediaDownload,
   onMediaInfo,
@@ -42,20 +43,11 @@ const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType | 'all'>('all');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
   
   const { actions } = useAppContext();
   
-  // Debounce search query
-  React.useEffect(() => {
-    if (!autoSearch) return;
-    
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [query, autoSearch]);
+  // Use optimized debounce hook
+  const debouncedQuery = useDebounce(autoSearch ? query : '', 300);
 
   const {
     data: searchResults,
@@ -72,13 +64,13 @@ const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
 
   const handleSearch = useCallback(() => {
     if (query.length >= 2) {
-      setDebouncedQuery(query);
+      // Force immediate search by triggering refetch
+      refetch();
     }
-  }, [query]);
+  }, [query, refetch]);
 
   const handleClear = useCallback(() => {
     setQuery('');
-    setDebouncedQuery('');
   }, []);
 
   const handleMediaSelect = useCallback(async (media: MediaItem) => {
@@ -116,6 +108,42 @@ const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
       console.log('Media info:', media);
     }
   }, [onMediaInfo]);
+
+  // Memoize grid configuration to prevent recalculation
+  const gridConfig = useMemo(() => ({
+    xs: 12,
+    sm: compact ? 12 : 6,
+    md: compact ? 6 : 4,
+    lg: compact ? 4 : 3,
+  }), [compact]);
+
+  // Memoize search results rendering to prevent unnecessary re-renders
+  const searchResultsContent = useMemo(() => {
+    if (!searchResults || searchResults.results.length === 0) {
+      return null;
+    }
+
+    return (
+      <Grid container spacing={2}>
+        {searchResults.results.map((media) => (
+          <Grid
+            item
+            {...gridConfig}
+            key={media.id}
+          >
+            <MediaCard
+              media={media}
+              onSelect={handleMediaSelect}
+              onDownload={handleMediaDownload}
+              onInfo={handleMediaInfo}
+              loading={loading}
+              compact={compact}
+            />
+          </Grid>
+        ))}
+      </Grid>
+    );
+  }, [searchResults, gridConfig, handleMediaSelect, handleMediaDownload, handleMediaInfo, loading, compact]);
 
   return (
     <Box>
@@ -203,27 +231,7 @@ const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
             Search Results ({searchResults.totalResults} found)
           </Typography>
           
-          <Grid container spacing={2}>
-            {searchResults.results.map((media) => (
-              <Grid
-                item
-                xs={12}
-                sm={compact ? 12 : 6}
-                md={compact ? 6 : 4}
-                lg={compact ? 4 : 3}
-                key={media.id}
-              >
-                <MediaCard
-                  media={media}
-                  onSelect={handleMediaSelect}
-                  onDownload={handleMediaDownload}
-                  onInfo={handleMediaInfo}
-                  loading={loading}
-                  compact={compact}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {searchResultsContent}
           
           {searchResults.page < searchResults.totalPages && (
             <Box display="flex" justifyContent="center" mt={3}>
@@ -247,6 +255,8 @@ const MediaSearchContainer: React.FC<MediaSearchContainerProps> = ({
       )}
     </Box>
   );
-};
+});
+
+MediaSearchContainer.displayName = 'MediaSearchContainer';
 
 export default MediaSearchContainer;
